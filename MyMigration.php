@@ -277,7 +277,7 @@ class MyMigration
 
         $engines = $query->row_array();
 
-        $attributes_str = "\n\t\t" . '$attributes_str = array(' . "\n";;
+        $attributes_str = "\n\t\t" . '$attributes = array(' . "\n";;
         $attributes_str .= ((string) $engines['Engine'] !== '') ? "\t\t\t'ENGINE' => '" . $engines['Engine'] . "'," . "\n" : '';
         $attributes_str .= ((string) $engines['Comment'] !== '') ? "\t\t\t'COMMENT' => '" . $engines['Comment'] . "'," . "\n" : '';
         $attributes_str .= "\t\t" . ');' . "\n";
@@ -286,7 +286,7 @@ class MyMigration
         $str .= $attributes_str;
 
         $str .= "\n\t\t" . '// Create Table ' . $tableName . "\n";
-        $str .= "\n\t\t" . '$this->dbforge->create_table("' . $tableName . '", TRUE, $attributes_str);' . "\n";
+        $str .= "\n\t\t" . '$this->dbforge->create_table("' . $tableName . '", TRUE, $attributes);' . "\n";
 
         // date部分暫時不塞
 //        $data = $this->tableData($tableName);
