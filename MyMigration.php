@@ -303,7 +303,7 @@ class MyMigration
 
         $attributes_str = "\n\t\t" . '$attributes = array(' . "\n";;
         $attributes_str .= ((string) $engines['Engine'] !== '') ? "\t\t\t'ENGINE' => '" . $engines['Engine'] . "'," . "\n" : '';
-        $attributes_str .= ((string) $engines['Comment'] !== '') ? "\t\t\t'COMMENT' => '" . $engines['Comment'] . "'," . "\n" : '';
+        $attributes_str .= ((string) $engines['Comment'] !== '') ? "\t\t\t'COMMENT' => \"'" . $engines['Comment'] . "'\"," . "\n" : '';
         $attributes_str .= "\t\t" . ');' . "\n";
 
         $str .= "\n\t\t" . '// Table attributes.' . "\n";
@@ -332,21 +332,30 @@ class MyMigration
         $str = "\n\t\t" . "//GET $tableName data";
         $query = $this->_ci->db->get($tableName);
         $result = $query->result();
-        if (null == $result) {
+
+        if (null == $result) 
+        {
             $str .= "\n\t\t" . "//no data";
             return FALSE;
         }
+
         $data = '';
-        foreach ($result AS $row) {
+
+        foreach ($result AS $row) 
+        {
 
             $data = '' == $data ? '' : $data . ',';
 
             $data .= "\n\t\t\t\t" . 'array(';
-            foreach ($row AS $key => $val) {
+
+            foreach ($row AS $key => $val) 
+            {
                 $data .= "\n\t\t\t\t\t" . "'$key'=>'$val',";
             }
+
             $data .= "\n\t\t\t\t" .")";
         }
+
         $data = "\n\t\t" . '$data = array(' . $data;
         $data .= "\n\t\t" . ");";
 
