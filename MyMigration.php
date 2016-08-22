@@ -7,19 +7,54 @@
 
 class MyMigration
 {
-    private   $_ci;
-    protected $tables = '*';
-    protected $write_file = TRUE;
-    protected $path = '';
-    protected $skip_tables = array();
-    protected $add_view = FALSE;
+    /**
+     * @var CI_Controller
+     */
+    private $_ci = NULL;
+
+    /**
+     * @var string migration folder name
+     */
     private   $_migration_folder_name = 'migrations';
+
+    /**
+     * @var array timestamp_set
+     */
     private   $_timestamp_set = array();
- 
-    function __construct()
+
+    /**
+     * @var string
+     */
+    protected $tables = '*';
+
+    /**
+     * @var bool
+     */
+    protected $write_file = TRUE;
+
+    /**
+     * @var string
+     */
+    protected $path = '';
+
+    /**
+     * @var array
+     */
+    protected $skip_tables = array();
+
+    /**
+     * @var bool
+     */
+    protected $add_view = FALSE;
+
+
+    /**
+     * MyMigration constructor.
+     */
+    public function __construct()
     {
         // Get Codeigniter Object
-        if(!isset($this->_ci))
+        if( ! isset($this->_ci))
         {
             $this->_ci =& get_instance();
         }
@@ -33,9 +68,10 @@ class MyMigration
      * Generate Migrations Files
      *
      * @param string $tables
+     *
      * @return boolean|string
      */
-    function generate($tables = null)
+    public  function generate($tables = null)
     {
         //准备$this->tables
         if (null == $tables || '*' == $tables)
@@ -72,6 +108,7 @@ class MyMigration
                             {
                                 continue;
                             }
+
                             $tmp[] = $row[$table_name];
                         }
                     }
@@ -91,105 +128,75 @@ class MyMigration
             $this->tables = is_array($tables) ? $tables : explode(',', $tables);
         }
 
-        //循环生成文件
-        foreach ($this->tables as $table)
+        // create migration file or override it.
+        foreach ($this->tables as $table_name)
         {
-            unset($migration);
-            log_message('debug', print_r($table, TRUE));
-            $str = $this->getFileString($table, $this->up($table), $this->down($table));
+            $file_content = $this->getFileContent($table_name);
 
             if($this->write_file)
             {
-                if (NULL != $str)
+                if (NULL != $file_content)
                 {
-                    $result = $this->writeFile($table, $str);
+                    $this->writeFile($table_name, $file_content);
                     continue;
                 }
-            }
-            else
-            {
-                //TODU 输出
-                var_dump( $str);
             }
 
         }
 
-
         echo "Create migration success!";
+
         return TRUE;
     }
 
     /**
-     * 获取文件全部内容
+     * getFileContent
      *
-     * @param $table
-     * @param $up
-     * @param $down
+     * @param string $table_name table name
      *
-     * @return bool
+     * @return string FileContent
      */
-    function getFileString($table, $up, $down)
+    public function getFileContent($table_name)
     {
-        $str = '<?php ';
-        $str .= 'defined(\'BASEPATH\') OR exit(\'No direct script access allowed\');' . "\n\n";
-        $str .= "class Migration_create_$table extends CI_Migration" . "\n";
-        $str .= '{' . "\n";
-        $str .= $up;
-        $str .= $down;
-        $str .= '}';
+        $file_content = '<?php ';
+        $file_content .= 'defined(\'BASEPATH\') OR exit(\'No direct script access allowed\');' . "\n\n";
+        $file_content .= "class Migration_create_{$table_name} extends CI_Migration" . "\n";
+        $file_content .= '{' . "\n";
+        $file_content .= $this->up($table_name);
+        $file_content .= $this->down($table_name);
+        $file_content .= "\n" . '}' . "\n";
 
-        return $str;
+        $file_content = str_replace("\t", '    ', $file_content);
+
+        return $file_content;
     }
 
     /**
-     * 写入文件
+     * writeFile
      *
-     * @param $table
-     * @param $str
+     * @param string $table_name   table name
+     * @param string $file_content file content
      *
      * @return void
      */
-    function  writeFile($table,$str)
+    public function writeFile($table_name, $file_content)
     {
-        $file = $this->openFile($table);
-        fwrite($file, $str);
+        $file = $this->openFile($table_name);
+        fwrite($file, $file_content);
         fclose($file);
     }
 
     /**
-     * 验证是否有写权限
+     * openFile
      *
-     * @param $fileName
+     * @param string $table_name table name
      *
-     * @return bool
+     * @return bool|string
      */
-    function checkPermission($fileName)
-    {
-        //file permissions
-        if ($this->write_file)
-        {
-            if (!is_dir($this->path) OR !is_really_writable($this->path))
-            {
-                $msg = "can not write migration file to " . $this->path;
-                log_message('error', $msg);
-                return FALSE;
-            }
-//
-        }
-        return TRUE;
-    }
-
-    /**
-     * 创建文件
-     *
-     * @param $fileName
-     *
-     * @return void
-     */
-    function openFile($fileName)
+    public function openFile($table_name)
     {
         // get timestamp
-        $query = $this->_ci->db->query(' SHOW TABLE STATUS WHERE Name = \'' . $fileName .'\'');
+        $query = $this->_ci->db->query(' SHOW TABLE STATUS WHERE Name = \'' . $table_name .'\'');
 
         $engines = $query->row_array();
 
@@ -201,14 +208,15 @@ class MyMigration
         }
 
 
-        $file_path = $this->path . '/' . $timestamp .'_create_' . $fileName . '.php';
+        $file_path = $this->path . '/' . $timestamp .'_create_' . $table_name . '.php';
+
+        // Open for reading and writing.
+        // Place the file pointer at the beginning of the file and truncate the file to zero length.
+        // If the file does not exist, attempt to create it.
         $file = fopen($file_path, 'w+');
 
         if ( ! $file)
         {
-            $msg = 'No File';
-            log_message('error', $msg);
-//            echo $msg;
             return FALSE;
         }
 
@@ -218,13 +226,13 @@ class MyMigration
     }
 
     /**
-     * 根据table name 创建 migration up function
+     * Base on table name create migration up function
      *
-     * @param $tableName
+     * @param $table_name
      *
      * @return string|void
      */
-    function up($tableName)
+    public function up($table_name)
     {
         $str = "\n\t" . '/**' . "\n";
         $str .= "\t" . ' * up (create table)' . "\n";
@@ -235,7 +243,7 @@ class MyMigration
         $str .= "\t" . 'public function up()' . "\n";
         $str .= "\t" . '{' . "\n";
 
-        $query = $this->_ci->db->query('describe ' . $this->_ci->db->database . '.' . $this->_ci->db->dbprefix($tableName) );
+        $query = $this->_ci->db->query('describe ' . $this->_ci->db->database . '.' . $this->_ci->db->dbprefix($table_name));
 
         // 如果没有结果，直接返回
         if (null == $query->result())
@@ -297,7 +305,7 @@ class MyMigration
 
         // create db
 
-        $query = $this->_ci->db->query(' SHOW TABLE STATUS WHERE Name = \'' . $tableName . '\'');
+        $query = $this->_ci->db->query(' SHOW TABLE STATUS WHERE Name = \'' . $table_name . '\'');
 
         $engines = $query->row_array();
 
@@ -309,13 +317,13 @@ class MyMigration
         $str .= "\n\t\t" . '// Table attributes.' . "\n";
         $str .= $attributes_str;
 
-        $str .= "\n\t\t" . '// Create Table ' . $tableName . "\n";
-        $str .= "\t\t" . '$this->dbforge->create_table("' . $tableName . '", TRUE, $attributes);' . "\n";
+        $str .= "\n\t\t" . '// Create Table ' . $table_name . "\n";
+        $str .= "\t\t" . '$this->dbforge->create_table("' . $table_name . '", TRUE, $attributes);' . "\n";
 
         // date部分暫時不塞
-//        $data = $this->tableData($tableName);
+//        $data = $this->tableData($table_name);
 //        $str .=$data;
-        $str .= "\n\t" . ' }' . "\n";
+        $str .= "\n\t" . '}' . "\n";
 
         return $str;
     }
@@ -323,32 +331,31 @@ class MyMigration
     /**
      * 根据table name 获取表数据，给migration up 使用
      *
-     * @param $tableName
+     * @param string $table_name table name
      *
-     * @return void
+     * @return bool|string
      */
-    function tableData($tableName)
+    public function tableData($table_name)
     {
-        $str = "\n\t\t" . "//GET $tableName data";
-        $query = $this->_ci->db->get($tableName);
+        $str = "\n\t\t" . "//GET {$table_name} data";
+        $query = $this->_ci->db->get($table_name);
         $result = $query->result();
 
-        if (null == $result) 
+        if (NULL == $result)
         {
-            $str .= "\n\t\t" . "//no data";
             return FALSE;
         }
 
         $data = '';
 
-        foreach ($result AS $row) 
+        foreach ($result as $row)
         {
 
             $data = '' == $data ? '' : $data . ',';
 
             $data .= "\n\t\t\t\t" . 'array(';
 
-            foreach ($row AS $key => $val) 
+            foreach ($row as $key => $val)
             {
                 $data .= "\n\t\t\t\t\t" . "'$key'=>'$val',";
             }
@@ -361,20 +368,20 @@ class MyMigration
 
         $str .= $data . "\n";
 
-        $str .="\t\t". "//INSERT bath data" . "\n";
-        $str .="\t\t".'$this->db->insert_batch(\''.$tableName.'\',$data);' ."\n";
+        $str .= "\t\t". "//INSERT bath data" . "\n";
+        $str .= "\t\t".'$this->db->insert_batch(\'' . $table_name . '\',$data);' . "\n";
 
         return $str;
     }
 
     /**
-     * 根据table name 创建 migration down function
+     * Base on table name create migration down function
      *
-     * @param $tableName
+     * @param string $table_name table name
      *
      * @return string
      */
-    function down($tableName)
+    public function down($table_name)
     {
         $str = "\n\t" . '/**' . "\n";
         $str .= "\t" . ' * down (drop table)' . "\n";
@@ -384,9 +391,10 @@ class MyMigration
 
         $str .= "\t" . 'public function down()' . "\n";
         $str .= "\t" . '{' . "\n";
-        $str .= "\t\t" . '// Drop table ' . $tableName . "\n";
-        $str .= "\t\t" . '$this->dbforge->drop_table("' . $tableName . '", TRUE);' . "\n";
+        $str .= "\t\t" . '// Drop table ' . $table_name . "\n";
+        $str .= "\t\t" . '$this->dbforge->drop_table("' . $table_name . '", TRUE);' . "\n";
         $str .= "\t" . '}' . "\n";
+
         return $str;
     }
 }
