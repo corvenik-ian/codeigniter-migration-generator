@@ -13,8 +13,8 @@ class MyMigration
     protected $path = '';
     protected $skip_tables = array();
     protected $add_view = FALSE;
-    private   $_table_num = 1;
     private   $_migration_folder_name = 'migrations';
+    private   $_timestamp_set = array();
  
     function __construct()
     {
@@ -68,7 +68,8 @@ class MyMigration
                         else
                         {
                             /* skip views */
-                            if (strtolower($row['Table_type']) == 'view') {
+                            if (strtolower($row['Table_type']) == 'view')
+                            {
                                 continue;
                             }
                             $tmp[] = $row[$table_name];
@@ -77,9 +78,10 @@ class MyMigration
                 }
             }
 
-            for($i=0, $cnt = count($tmp); $i < $cnt; $i++)
-            { //去除表前缀
-                $tmp[$i]= str_ireplace($this->_ci->db->dbprefix,"",$tmp[$i]); //大小写不敏感
+            for($i = 0, $cnt = count($tmp); $i < $cnt; $i++)
+            { 
+                //去除表前缀
+                $tmp[$i]= str_ireplace($this->_ci->db->dbprefix, "", $tmp[$i]); //大小写不敏感
             }
 
             $this->tables = $tmp;
@@ -93,14 +95,14 @@ class MyMigration
         foreach ($this->tables as $table)
         {
             unset($migration);
-            log_message('debug', print_r($table, true));
+            log_message('debug', print_r($table, TRUE));
             $str = $this->getFileString($table, $this->up($table), $this->down($table));
 
             if($this->write_file)
             {
                 if (NULL != $str)
                 {
-                    $result = $this->writeFile($table,$str);
+                    $result = $this->writeFile($table, $str);
                     continue;
                 }
             }
@@ -114,14 +116,16 @@ class MyMigration
 
 
         echo "Create migration success!";
-        return true;
+        return TRUE;
     }
 
     /**
      * 获取文件全部内容
+     *
      * @param $table
      * @param $up
      * @param $down
+     *
      * @return bool
      */
     function getFileString($table, $up, $down)
@@ -139,8 +143,11 @@ class MyMigration
 
     /**
      * 写入文件
+     *
      * @param $table
      * @param $str
+     *
+     * @return void
      */
     function  writeFile($table,$str)
     {
@@ -151,7 +158,9 @@ class MyMigration
 
     /**
      * 验证是否有写权限
+     *
      * @param $fileName
+     *
      * @return bool
      */
     function checkPermission($fileName)
@@ -172,12 +181,27 @@ class MyMigration
 
     /**
      * 创建文件
+     *
      * @param $fileName
+     *
+     * @return void
      */
     function openFile($fileName)
     {
+        // get timestamp
+        $query = $this->_ci->db->query(' SHOW TABLE STATUS WHERE Name = \'' . $fileName .'\'');
 
-        $file_path = $this->path . '/' . sprintf('%03d', $this->_table_num) .'_create_' . $fileName . '.php';
+        $engines = $query->row_array();
+
+        $timestamp = date('YmdHis', strtotime($engines['Create_time']));
+
+        while(in_array($timestamp, $this->_timestamp_set))
+        {
+            $timestamp += 1;
+        }
+
+
+        $file_path = $this->path . '/' . $timestamp .'_create_' . $fileName . '.php';
         $file = fopen($file_path, 'w+');
 
         if ( ! $file)
@@ -188,27 +212,28 @@ class MyMigration
             return FALSE;
         }
 
-        $this->_table_num++;
+        $this->_timestamp_set[] = $timestamp;
 
         return $file;
     }
 
     /**
      * 根据table name 创建 migration up function
+     *
      * @param $tableName
+     *
      * @return string|void
      */
     function up($tableName)
     {
         $str = "\n\t" . '/**' . "\n";
-        $str .= "\t" . '* up (create table)' . "\n";
-        $str .= "\t" . '*/' . "\n";
+        $str .= "\t" . ' * up (create table)' . "\n";
+        $str .= "\t" . ' *' . "\n";
+        $str .= "\t" . ' * @return void' . "\n";
+        $str .= "\t" . ' */' . "\n";
 
         $str .= "\t" . 'public function up()' . "\n";
         $str .= "\t" . '{' . "\n";
-        $str .= "\n\t\t" . "// Drop table '$tableName' if it exists";
-        $str .= "\n\t\t" . '$this->dbforge->drop_table(\'' . $tableName . '\', TRUE);';
-
 
         $query = $this->_ci->db->query('describe ' . $this->_ci->db->database . '.' . $this->_ci->db->dbprefix($tableName) );
 
@@ -259,17 +284,16 @@ class MyMigration
 
             if ($column['Key'] == 'PRI')
             {
-                $add_key_str .= "\n\t\t" . '$this->dbforge->add_key("' . $column['Field'] . '",true);' . "\n";
+                $add_key_str .= "\t\t" . '$this->dbforge->add_key("' . $column['Field'] . '",true);' . "\n";
             }
         }
 
         $add_field_str .= "\t\t));" . "\n";
 
-        $str .= "\n\n\t\t" . '// Add Fields.' . "\n";
+        $str .= "\n\t\t" . '// Add Fields.' . "\n";
         $str .= $add_field_str;
 
-        $str .= "\n\t\t" . '// Add Primary Key.' . "\n";
-        $str .= $add_key_str;
+        $str .= ($add_key_str !== '') ? "\n\t\t" . '// Add Primary Key.' . "\n" . $add_key_str : '';
 
         // create db
 
@@ -286,7 +310,7 @@ class MyMigration
         $str .= $attributes_str;
 
         $str .= "\n\t\t" . '// Create Table ' . $tableName . "\n";
-        $str .= "\n\t\t" . '$this->dbforge->create_table("' . $tableName . '", TRUE, $attributes);' . "\n";
+        $str .= "\t\t" . '$this->dbforge->create_table("' . $tableName . '", TRUE, $attributes);' . "\n";
 
         // date部分暫時不塞
 //        $data = $this->tableData($tableName);
@@ -298,7 +322,10 @@ class MyMigration
 
     /**
      * 根据table name 获取表数据，给migration up 使用
+     *
      * @param $tableName
+     *
+     * @return void
      */
     function tableData($tableName)
     {
@@ -333,14 +360,18 @@ class MyMigration
 
     /**
      * 根据table name 创建 migration down function
+     *
      * @param $tableName
+     *
      * @return string
      */
     function down($tableName)
     {
         $str = "\n\t" . '/**' . "\n";
-        $str .= "\t" . '* down (drop table)' . "\n";
-        $str .= "\t" . '*/' . "\n";
+        $str .= "\t" . ' * down (drop table)' . "\n";
+        $str .= "\t" . ' *' . "\n";
+        $str .= "\t" . ' * @return void' . "\n";
+        $str .= "\t" . ' */' . "\n";
 
         $str .= "\t" . 'public function down()' . "\n";
         $str .= "\t" . '{' . "\n";
