@@ -113,12 +113,12 @@ class Migration_lib
                             continue;
                         }
 
-                        $migration_table_set[] = $table_info[$table_name];
+                        $migration_table_set[] = $table_info['Tables_in_chentron'];
                     }
                 }
             }
 
-            if($this->_ci->db->prefix !== '')
+            if($this->_ci->db->dbprefix($this->_db_name) !== '')
             {
                 array_walk($migration_table_set, [$this, '_remove_database_prefix']);
             }
@@ -130,7 +130,8 @@ class Migration_lib
             $this->migration_table_set = is_array($tables) ? $tables : explode(',', $tables);
         }
 
-        if(empty($this->migration_table_set))
+
+        if( ! empty($this->migration_table_set))
         {
             // create migration file or override it.
             foreach ($this->migration_table_set as $table_name)
@@ -262,7 +263,7 @@ class Migration_lib
      *
      * @param $table_name
      *
-     * @return string|void
+     * @return string
      */
     public function get_function_up_content($table_name)
     {
@@ -275,7 +276,7 @@ class Migration_lib
         $str .= "\t" . 'public function up()' . "\n";
         $str .= "\t" . '{' . "\n";
 
-        $query = $this->_ci->db->query("SHOW FULL FIELDS FROM {$this->_ci->db->dbprefix($table_name)} FROM ($this->_db_name)");
+        $query = $this->_ci->db->query("SHOW FULL FIELDS FROM {$this->_ci->db->dbprefix($table_name)} FROM {$this->_db_name}");
 
         // 如果没有结果，直接返回
         if ($query->result() === NULL)
