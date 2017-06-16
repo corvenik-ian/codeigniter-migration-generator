@@ -113,7 +113,7 @@ class Migration_lib
                             continue;
                         }
 
-                        $migration_table_set[] = $table_info['Tables_in_chentron'];
+                        $migration_table_set[] = $table_info["Tables_in_{$this->_db_name}"];
                     }
                 }
             }
