@@ -295,7 +295,7 @@ class Migration_lib
             // field name
             $add_field_str .= "\t\t\t'{$column['Field']}' => array(" . "\n";
 
-            preg_match('/^(\w+)\(([\d]+)\)/', $column['Type'], $match);
+            preg_match('/^(\w+)\(([\d]+(?:,[\d]+)*)\)/', $column['Type'], $match);
 
             if($match === [])
             {
