@@ -295,7 +295,7 @@ class Migration_lib
             // field name
             $add_field_str .= "\t\t\t'{$column['Field']}' => array(" . "\n";
 
-            preg_match('/^(\w+)\(([\d]+(?:,[\d]+)*)\)/', $column['Type'], $match);
+            preg_match('/^(\w+)\((.+)\)/', $column['Type'], $match);
 
             if($match === [])
             {
@@ -350,7 +350,7 @@ class Migration_lib
 
         $attributes_str = "\n\t\t" . '$attributes = array(' . "\n";;
         $attributes_str .= ((string) $engines['Engine'] !== '') ? "\t\t\t'ENGINE' => '" . $engines['Engine'] . "'," . "\n" : '';
-        $attributes_str .= ((string) $engines['Comment'] !== '') ? "\t\t\t'COMMENT' => '\\'" . str_replace("'", "\\'", $engines['Comment']) . "'\\'',\n" : '';
+        $attributes_str .= ((string) $engines['Comment'] !== '') ? "\t\t\t'COMMENT' => '\\'" . str_replace("'", "\\'", $engines['Comment']) . "\\'',\n" : '';
         $attributes_str .= "\t\t" . ');' . "\n";
 
         $str .= "\n\t\t" . '// Table attributes.' . "\n";
